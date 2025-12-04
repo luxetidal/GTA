@@ -10,6 +10,7 @@ import {
   LogOut,
   ChevronDown,
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import {
   Sidebar,
   SidebarContent,
@@ -184,15 +185,16 @@ export function AppSidebar() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <a
-                href="/api/logout"
-                className="flex items-center gap-2 text-destructive"
-                data-testid="button-logout"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Log out</span>
-              </a>
+            <DropdownMenuItem
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.href = "/";
+              }}
+              className="flex items-center gap-2 text-destructive cursor-pointer"
+              data-testid="button-logout"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

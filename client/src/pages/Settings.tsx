@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/ThemeProvider";
+import { supabase } from "@/lib/supabase";
 import {
   User,
   Moon,
@@ -161,11 +162,16 @@ export default function Settings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="destructive" asChild>
-            <a href="/api/logout" data-testid="button-logout-settings">
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </a>
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = "/";
+            }}
+            data-testid="button-logout-settings"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
           </Button>
         </CardContent>
       </Card>

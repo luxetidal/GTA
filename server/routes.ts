@@ -1,32 +1,40 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./supabaseAuth";
 import { z } from "zod";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Health check endpoint
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const { checkDatabaseHealth } = await import("./initDb");
+      const dbHealthy = await checkDatabaseHealth();
+      res.json({
+        status: "ok",
+        database: dbHealthy ? "connected" : "disconnected",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Setup authentication
   await setupAuth(app);
 
-  // Auth routes
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // Auth routes are handled in setupAuth
 
   // Dashboard stats
   app.get("/api/dashboard/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const stats = await storage.getDashboardStats(userId);
       res.json(stats);
     } catch (error) {
@@ -38,7 +46,7 @@ export async function registerRoutes(
   // Business routes
   app.get("/api/businesses", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const businesses = await storage.getBusinesses(userId);
       res.json(businesses);
     } catch (error) {
@@ -49,7 +57,7 @@ export async function registerRoutes(
 
   app.get("/api/businesses/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const businessId = req.params.id;
       
       // Check authorization
@@ -71,7 +79,7 @@ export async function registerRoutes(
 
   app.post("/api/businesses", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const schema = z.object({
         name: z.string().min(2),
         type: z.enum(["dealership", "store", "restaurant", "garage", "nightclub", "other"]),
@@ -89,7 +97,7 @@ export async function registerRoutes(
 
   app.patch("/api/businesses/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const businessId = req.params.id;
       
       // Check authorization - only owner can update business
@@ -111,7 +119,7 @@ export async function registerRoutes(
 
   app.delete("/api/businesses/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const businessId = req.params.id;
       
       // Check authorization - only owner can delete business
@@ -131,7 +139,7 @@ export async function registerRoutes(
   // Product routes
   app.get("/api/products", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { businessId, lowStock } = req.query;
 
       if (lowStock === "true") {
@@ -159,7 +167,7 @@ export async function registerRoutes(
 
   app.get("/api/products/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const product = await storage.getProduct(req.params.id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
@@ -180,7 +188,7 @@ export async function registerRoutes(
 
   app.post("/api/products", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const schema = z.object({
         businessId: z.string(),
         name: z.string().min(2),
@@ -208,7 +216,7 @@ export async function registerRoutes(
 
   app.patch("/api/products/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const productId = req.params.id;
       
       // Get the product to check its business
@@ -237,7 +245,7 @@ export async function registerRoutes(
 
   app.delete("/api/products/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const productId = req.params.id;
       
       // Get the product to check its business
@@ -263,7 +271,7 @@ export async function registerRoutes(
   // Sales routes
   app.get("/api/sales", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const sales = await storage.getSales(userId);
       res.json(sales);
     } catch (error) {
@@ -274,7 +282,7 @@ export async function registerRoutes(
 
   app.get("/api/sales/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const sale = await storage.getSale(req.params.id);
       if (!sale) {
         return res.status(404).json({ message: "Sale not found" });
@@ -295,7 +303,7 @@ export async function registerRoutes(
 
   app.post("/api/sales", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const schema = z.object({
         businessId: z.string(),
         buyerName: z.string().min(1),
@@ -357,7 +365,7 @@ export async function registerRoutes(
   // Invoice routes
   app.get("/api/invoices", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const invoices = await storage.getInvoices(userId);
       res.json(invoices);
     } catch (error) {
@@ -368,7 +376,7 @@ export async function registerRoutes(
 
   app.get("/api/invoices/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const invoice = await storage.getInvoice(req.params.id);
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
@@ -391,7 +399,7 @@ export async function registerRoutes(
 
   app.patch("/api/invoices/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const invoiceId = req.params.id;
       
       // Get the invoice to check authorization
@@ -425,7 +433,7 @@ export async function registerRoutes(
   // Employee routes
   app.get("/api/employees", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const employees = await storage.getEmployees(userId);
       res.json(employees);
     } catch (error) {
@@ -436,7 +444,7 @@ export async function registerRoutes(
 
   app.post("/api/employees", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const schema = z.object({
         businessId: z.string(),
         email: z.string().email(),
@@ -472,7 +480,7 @@ export async function registerRoutes(
 
   app.delete("/api/employees/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const employeeId = req.params.id;
       
       // Get the employee record directly (not filtered by user)

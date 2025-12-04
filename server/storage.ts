@@ -97,18 +97,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+    try {
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      
+      if (!user) {
+        throw new Error("Failed to upsert user - no user returned");
+      }
+      
+      return user;
+    } catch (error) {
+      console.error("Error in upsertUser:", error);
+      throw error;
+    }
   }
 
   // Business operations
@@ -183,12 +196,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBusiness(business: InsertBusiness & { ownerId: string }): Promise<Business> {
-    const apiKey = `rp_${randomUUID().replace(/-/g, "")}`;
-    const [created] = await db
-      .insert(businesses)
-      .values({ ...business, apiKey })
-      .returning();
-    return created;
+    try {
+      const apiKey = `rp_${randomUUID().replace(/-/g, "")}`;
+      const [created] = await db
+        .insert(businesses)
+        .values({ ...business, apiKey })
+        .returning();
+      
+      if (!created) {
+        throw new Error("Failed to create business - no business returned");
+      }
+      
+      return created;
+    } catch (error) {
+      console.error("Error creating business:", error);
+      throw error;
+    }
   }
 
   async updateBusiness(id: string, business: Partial<InsertBusiness>): Promise<Business | undefined> {
@@ -275,8 +298,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [created] = await db.insert(products).values(product).returning();
-    return created;
+    try {
+      const [created] = await db.insert(products).values(product).returning();
+      
+      if (!created) {
+        throw new Error("Failed to create product - no product returned");
+      }
+      
+      return created;
+    } catch (error) {
+      console.error("Error creating product:", error);
+      throw error;
+    }
   }
 
   async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined> {
@@ -336,38 +369,51 @@ export class DatabaseStorage implements IStorage {
     saleData: InsertSale,
     items: Omit<InsertSaleItem, "saleId">[]
   ): Promise<{ sale: Sale; invoice: Invoice }> {
-    // Create sale
-    const [sale] = await db.insert(sales).values(saleData).returning();
+    try {
+      // Create sale
+      const [sale] = await db.insert(sales).values(saleData).returning();
+      
+      if (!sale) {
+        throw new Error("Failed to create sale - no sale returned");
+      }
 
-    // Create sale items and update stock
-    for (const item of items) {
-      await db.insert(saleItems).values({
-        ...item,
-        saleId: sale.id,
-      });
+      // Create sale items and update stock
+      for (const item of items) {
+        await db.insert(saleItems).values({
+          ...item,
+          saleId: sale.id,
+        });
 
-      // Update product stock
-      await db
-        .update(products)
-        .set({
-          stock: sql`${products.stock} - ${item.quantity}`,
-          updatedAt: new Date(),
+        // Update product stock
+        await db
+          .update(products)
+          .set({
+            stock: sql`${products.stock} - ${item.quantity}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(products.id, item.productId));
+      }
+
+      // Generate invoice
+      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+      const [invoice] = await db
+        .insert(invoices)
+        .values({
+          saleId: sale.id,
+          invoiceNumber,
+          status: "pending",
         })
-        .where(eq(products.id, item.productId));
+        .returning();
+
+      if (!invoice) {
+        throw new Error("Failed to create invoice - no invoice returned");
+      }
+
+      return { sale, invoice };
+    } catch (error) {
+      console.error("Error creating sale:", error);
+      throw error;
     }
-
-    // Generate invoice
-    const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
-    const [invoice] = await db
-      .insert(invoices)
-      .values({
-        saleId: sale.id,
-        invoiceNumber,
-        status: "pending",
-      })
-      .returning();
-
-    return { sale, invoice };
   }
 
   // Invoice operations

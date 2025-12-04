@@ -49,7 +49,7 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Button asChild data-testid="button-login">
-              <a href="/api/login">
+              <a href="/login">
                 Sign In
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
@@ -73,7 +73,7 @@ export default function Landing() {
               </p>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
                 <Button size="lg" asChild data-testid="button-get-started">
-                  <a href="/api/login">
+                  <a href="/login">
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
@@ -188,7 +188,7 @@ export default function Landing() {
               Sign up now and start managing your GTA RP businesses like a pro
             </p>
             <Button size="lg" className="mt-8" asChild data-testid="button-signup">
-              <a href="/api/login">
+              <a href="/login">
                 Create Your Account
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
