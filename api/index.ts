@@ -1,6 +1,6 @@
 // Vercel serverless function entry point
 // This file exports the Express app for Vercel's serverless functions
-import { initializeApp } from '../server/app.ts';
+import { initializeApp } from '../server/app';
 import type { Request, Response } from 'express';
 
 let appPromise: ReturnType<typeof initializeApp> | null = null;
