@@ -7,12 +7,6 @@
       "includeFiles": "server/**/*.{js,json}"
     }
   },
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
-    }
-  ],
   "routes": [
     {
       "handle": "filesystem"
