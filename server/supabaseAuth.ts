@@ -3,11 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 import { storage } from "./storage";
 
 // Initialize Supabase client
-const supabaseUrl = process.env.VITE_SUPABASE_URL!;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY!;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY must be set");
+  throw new Error("SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_ANON_KEY (or VITE_SUPABASE_ANON_KEY) must be set");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
