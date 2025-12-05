@@ -1,0 +1,21 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": "../.vercel/output",
+    "rootDir": "..",
+    "baseUrl": "..",
+    "paths": {
+      "@shared/*": ["./shared/*"]
+    },
+    "allowImportingTsExtensions": false
+  },
+  "include": [
+    "./**/*",
+    "../server/**/*",
+    "../shared/**/*"
+  ],
+  "exclude": ["node_modules"]
+}
