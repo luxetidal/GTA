@@ -13,7 +13,6 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
   {
@@ -24,7 +23,6 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
@@ -38,6 +36,7 @@ export const users = pgTable("users", {
 
 // Business types for GTA RP
 export const businessTypeEnum = ["dealership", "store", "restaurant", "garage", "nightclub", "other"] as const;
+export const employeeRoleEnum = ["manager", "employee"] as const;
 
 // Businesses table
 export const businesses = pgTable("businesses", {
@@ -57,7 +56,7 @@ export const businessEmployees = pgTable("business_employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   businessId: varchar("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  role: varchar("role", { enum: ["manager", "employee"] }).default("employee"),
+  role: varchar("role", { enum: employeeRoleEnum }).default("employee"),
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
@@ -75,6 +74,10 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Sales enums
+export const saleStatusEnum = ["pending", "completed", "cancelled"] as const;
+export const saleSourceEnum = ["web", "game"] as const;
+
 // Sales table
 export const sales = pgTable("sales", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -83,8 +86,8 @@ export const sales = pgTable("sales", {
   buyerName: varchar("buyer_name", { length: 255 }).notNull(),
   buyerInfo: text("buyer_info"),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: varchar("status", { enum: ["pending", "completed", "cancelled"] }).default("completed"),
-  source: varchar("source", { enum: ["web", "game"] }).default("web"),
+  status: varchar("status", { enum: saleStatusEnum }).default("completed"),
+  source: varchar("source", { enum: saleSourceEnum }).default("web"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -99,12 +102,15 @@ export const saleItems = pgTable("sale_items", {
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
 });
 
+// Invoice enums
+export const invoiceStatusEnum = ["pending", "paid", "cancelled"] as const;
+
 // Invoices table
 export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   saleId: varchar("sale_id").notNull().references(() => sales.id, { onDelete: "cascade" }),
   invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
-  status: varchar("status", { enum: ["pending", "paid", "cancelled"] }).default("pending"),
+  status: varchar("status", { enum: invoiceStatusEnum }).default("pending"),
   issueDate: timestamp("issue_date").defaultNow(),
   dueDate: timestamp("due_date"),
   paidAt: timestamp("paid_at"),
@@ -178,43 +184,52 @@ export const invoicesRelations = relations(invoices, ({ one }) => ({
 }));
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-export const insertBusinessSchema = createInsertSchema(businesses).omit({ 
-  id: true, 
-  createdAt: true, 
+export const insertBusinessSchema = createInsertSchema(businesses, {
+  type: z.enum(businessTypeEnum),
+}).omit({
+  id: true,
+  createdAt: true,
   updatedAt: true,
   apiKey: true,
 });
 
-export const insertBusinessEmployeeSchema = createInsertSchema(businessEmployees).omit({ 
-  id: true, 
-  joinedAt: true 
+export const insertBusinessEmployeeSchema = createInsertSchema(businessEmployees, {
+  role: z.enum(employeeRoleEnum).optional(),
+}).omit({
+  id: true,
+  joinedAt: true
 });
 
-export const insertProductSchema = createInsertSchema(products).omit({ 
-  id: true, 
-  createdAt: true, 
-  updatedAt: true 
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-export const insertSaleSchema = createInsertSchema(sales).omit({ 
-  id: true, 
-  createdAt: true 
+export const insertSaleSchema = createInsertSchema(sales, {
+  status: z.enum(saleStatusEnum).optional(),
+  source: z.enum(saleSourceEnum).optional(),
+}).omit({
+  id: true,
+  createdAt: true
 });
 
-export const insertSaleItemSchema = createInsertSchema(saleItems).omit({ 
-  id: true 
+export const insertSaleItemSchema = createInsertSchema(saleItems).omit({
+  id: true
 });
 
-export const insertInvoiceSchema = createInsertSchema(invoices).omit({ 
-  id: true, 
+export const insertInvoiceSchema = createInsertSchema(invoices, {
+  status: z.enum(invoiceStatusEnum).optional(),
+}).omit({
+  id: true,
   issueDate: true,
-  paidAt: true 
+  paidAt: true
 });
 
 // Types

@@ -3,6 +3,13 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./supabaseAuth";
 import { z } from "zod";
+import {
+  businessTypeEnum,
+  employeeRoleEnum,
+  saleStatusEnum,
+  saleSourceEnum,
+  invoiceStatusEnum
+} from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -82,7 +89,7 @@ export async function registerRoutes(
       const userId = req.user.id;
       const schema = z.object({
         name: z.string().min(2),
-        type: z.enum(["dealership", "store", "restaurant", "garage", "nightclub", "other"]),
+        type: z.enum(businessTypeEnum),
         description: z.string().optional(),
       });
 
@@ -309,8 +316,8 @@ export async function registerRoutes(
         buyerName: z.string().min(1),
         buyerInfo: z.string().optional(),
         totalAmount: z.string(),
-        status: z.enum(["pending", "completed", "cancelled"]).optional(),
-        source: z.enum(["web", "game"]).optional(),
+        status: z.enum(saleStatusEnum).optional(),
+        source: z.enum(saleSourceEnum).optional(),
         items: z.array(
           z.object({
             productId: z.string(),
@@ -417,7 +424,7 @@ export async function registerRoutes(
       }
       
       const schema = z.object({
-        status: z.enum(["pending", "paid", "cancelled"]).optional(),
+        status: z.enum(invoiceStatusEnum).optional(),
         dueDate: z.string().optional(),
       });
 
@@ -448,7 +455,7 @@ export async function registerRoutes(
       const schema = z.object({
         businessId: z.string(),
         email: z.string().email(),
-        role: z.enum(["manager", "employee"]).optional(),
+        role: z.enum(employeeRoleEnum).optional(),
       });
 
       const data = schema.parse(req.body);
