@@ -346,11 +346,11 @@ export class DatabaseStorage implements IStorage {
       orderBy: desc(sales.createdAt),
     });
 
-    return allSales.filter((s) => businessIds.includes(s.businessId));
+    return allSales.filter((s) => businessIds.includes(s.businessId)) as SaleWithRelations[];
   }
 
   async getSale(id: string): Promise<SaleWithRelations | undefined> {
-    return await db.query.sales.findFirst({
+    const result = await db.query.sales.findFirst({
       where: eq(sales.id, id),
       with: {
         seller: true,
@@ -363,6 +363,7 @@ export class DatabaseStorage implements IStorage {
         invoice: true,
       },
     });
+    return result as SaleWithRelations | undefined;
   }
 
   async createSale(
